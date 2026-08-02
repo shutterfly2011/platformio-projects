@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pio boards *)",
+      "WebSearch",
+      "Bash(~/.platformio/penv/bin/pio pkg *)",
+      "Bash(~/.platformio/penv/bin/pio run *)"
+    ]
+  }
+}

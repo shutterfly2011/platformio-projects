@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find / -iname \"pins_arduino.h\" -path \"*esp32s3_tft*\")",
+      "Read(//Users/xiaowei/.platformio/**)"
+    ]
+  }
+}
