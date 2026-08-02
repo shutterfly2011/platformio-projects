@@ -3,11 +3,11 @@
 #include "AngerMonitor.h"
 #include "BeepAlert.h"
 #include "Config.h"
-#include "HeuristicAngerDetector.h"
+#include "EnsembleAngerDetector.h"
 #include "WaveformDisplay.h"
 
 static int16_t audioBuffer[kAudioFrameSamples];
-static HeuristicAngerDetector detector(kSampleRateHz);
+static EnsembleAngerDetector detector(kSampleRateHz, kFusionMode);
 static AngerMonitor monitor(detector, kFramesToConfirm, kMonitorWindow,
                              kCooldownMs);
 

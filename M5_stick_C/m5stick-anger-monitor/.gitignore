@@ -3,3 +3,6 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# WiFi credentials + Edge Impulse API key — copy Secrets.h.example instead.
+include/Secrets.h

@@ -14,10 +14,10 @@
 //   4. Implement isAngry() to run the classifier on the raw frame and
 //      return true when the "angry" label's confidence clears
 //      kEdgeImpulseConfidenceThreshold.
-//   5. In platformio.ini, add `-DUSE_EDGE_IMPULSE` to build_flags.
-//   6. In main.cpp, swap `HeuristicAngerDetector detector(...)` for
-//      `EdgeImpulseAngerDetector detector(...)`. AngerMonitor and
-//      BeepAlert need no changes — both only depend on IAngerDetector.
+//   5. In platformio.ini, add `-DUSE_EDGE_IMPULSE` to build_flags. main.cpp
+//      already runs this alongside HeuristicAngerDetector via
+//      EnsembleAngerDetector (see EnsembleAngerDetector.h) — no code changes
+//      needed. Tune kFusionMode in Config.h (OR vs AND) once both are live.
 
 #include "IAngerDetector.h"
 
