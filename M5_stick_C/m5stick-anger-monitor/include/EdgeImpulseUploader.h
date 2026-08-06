@@ -12,6 +12,15 @@ class EdgeImpulseUploader {
   EdgeImpulseUploader(uint32_t sampleRate, size_t maxSamples);
   ~EdgeImpulseUploader();
 
+  // Allocates the recording buffer. Must be called once from setup() before
+  // any other method — NOT from the constructor, because this object is
+  // instantiated at global scope and C++ global constructors run during
+  // ESP32 static-init, before the heap allocator is fully set up; a heap
+  // allocation there throws bad_alloc, and since Arduino-ESP32 builds
+  // without C++ exceptions by default, that aborts the boot in a crash
+  // loop. Returns false if the allocation failed.
+  bool begin();
+
   // Connects to WiFi using the credentials in Secrets.h. Call once from
   // setup(); blocks (with a timeout) until connected.
   bool connectWifi();
@@ -35,7 +44,7 @@ class EdgeImpulseUploader {
  private:
   uint32_t _sampleRate;
   size_t _maxSamples;
-  int16_t* _buffer;
+  int16_t* _buffer = nullptr;
   size_t _writeIndex = 0;
   bool _recording = false;
   const char* _label = "";

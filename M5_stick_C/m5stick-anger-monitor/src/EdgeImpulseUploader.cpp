@@ -4,6 +4,7 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <esp_heap_caps.h>
 
 #include <algorithm>
 #include <cstring>
@@ -13,7 +14,12 @@
 namespace {
 
 constexpr const char* kIngestionHost = "ingestion.edgeimpulse.com";
-constexpr const char* kIngestionPath = "/api/training/data";
+// "/api/training/data" takes CBOR/JSON, not a raw file — it 422s on a plain
+// audio/wav body (confirmed against the live API). "/api/training/files"
+// is the raw-file-upload endpoint and wants multipart/form-data.
+constexpr const char* kIngestionPath = "/api/training/files";
+constexpr const char* kMultipartBoundary =
+    "----EdgeImpulseM5StickBoundary7MA4YWxk";
 constexpr uint32_t kWifiConnectTimeoutMs = 15000;
 
 void writeWavHeader(uint8_t* header, uint32_t dataBytes,
@@ -61,11 +67,17 @@ void writeWavHeader(uint8_t* header, uint32_t dataBytes,
 
 EdgeImpulseUploader::EdgeImpulseUploader(uint32_t sampleRate,
                                           size_t maxSamples)
-    : _sampleRate(sampleRate),
-      _maxSamples(maxSamples),
-      _buffer(new int16_t[maxSamples]) {}
+    : _sampleRate(sampleRate), _maxSamples(maxSamples) {}
 
-EdgeImpulseUploader::~EdgeImpulseUploader() { delete[] _buffer; }
+EdgeImpulseUploader::~EdgeImpulseUploader() { heap_caps_free(_buffer); }
+
+bool EdgeImpulseUploader::begin() {
+  // The recording buffer (up to 160 KB) doesn't reliably fit in internal
+  // heap alongside WiFi/display buffers (see platformio.ini) — use PSRAM.
+  _buffer = static_cast<int16_t*>(
+      heap_caps_malloc(_maxSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM));
+  return _buffer != nullptr;
+}
 
 bool EdgeImpulseUploader::connectWifi() {
   WiFi.mode(WIFI_STA);
@@ -109,10 +121,32 @@ bool EdgeImpulseUploader::stopAndUpload() {
   if (_writeIndex == 0) return false;
 
   uint32_t dataBytes = static_cast<uint32_t>(_writeIndex * sizeof(int16_t));
-  uint32_t totalBytes = 44 + dataBytes;
-  uint8_t* wav = new uint8_t[totalBytes];
-  writeWavHeader(wav, dataBytes, _sampleRate);
-  memcpy(wav + 44, _buffer, dataBytes);
+  uint32_t wavBytes = 44 + dataBytes;
+
+  String fileName = String(_label) + ".wav";
+  String prefix = String("--") + kMultipartBoundary + "\r\n" +
+                  "Content-Disposition: form-data; name=\"data\"; "
+                  "filename=\"" +
+                  fileName + "\"\r\n" + "Content-Type: audio/wav\r\n\r\n";
+  String suffix = String("\r\n--") + kMultipartBoundary + "--\r\n";
+
+  // Build the multipart body directly in PSRAM (same reasoning as the
+  // recording buffer in begin() — this can be ~160 KB and doesn't reliably
+  // fit in fragmented internal heap) rather than assembling the WAV
+  // separately and copying it again.
+  size_t totalLen = prefix.length() + wavBytes + suffix.length();
+  uint8_t* body =
+      static_cast<uint8_t*>(heap_caps_malloc(totalLen, MALLOC_CAP_SPIRAM));
+  if (!body) {
+    Serial.println("Edge Impulse upload: body alloc failed");
+    _writeIndex = 0;
+    return false;
+  }
+
+  memcpy(body, prefix.c_str(), prefix.length());
+  writeWavHeader(body + prefix.length(), dataBytes, _sampleRate);
+  memcpy(body + prefix.length() + 44, _buffer, dataBytes);
+  memcpy(body + prefix.length() + wavBytes, suffix.c_str(), suffix.length());
 
   WiFiClientSecure client;
   // Skips certificate validation rather than pinning Edge Impulse's root
@@ -126,15 +160,16 @@ bool EdgeImpulseUploader::stopAndUpload() {
   http.begin(client, url);
   http.addHeader("x-api-key", kEdgeImpulseApiKey);
   http.addHeader("x-label", _label);
-  http.addHeader("x-file-name", String(_label) + ".wav");
-  http.addHeader("Content-Type", "audio/wav");
+  http.addHeader("Content-Type",
+                  String("multipart/form-data; boundary=") +
+                      kMultipartBoundary);
 
-  int status = http.POST(wav, totalBytes);
+  int status = http.POST(body, totalLen);
   Serial.printf("Edge Impulse upload: HTTP %d, %u bytes (%.1fs), label=%s\n",
-                status, totalBytes, _writeIndex / static_cast<float>(_sampleRate),
+                status, totalLen, _writeIndex / static_cast<float>(_sampleRate),
                 _label);
   http.end();
-  delete[] wav;
+  heap_caps_free(body);
 
   _writeIndex = 0;
   return status >= 200 && status < 300;

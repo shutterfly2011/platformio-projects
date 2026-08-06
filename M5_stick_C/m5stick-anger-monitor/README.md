@@ -52,19 +52,38 @@ pio run -e datacollector -t upload     # flash the data-collection tool
   flashes, and boots cleanly on hardware (confirmed via serial boot log).
   Threshold tuning (`Config.h`) for your voice/room has **not** been done
   yet — the shipped values are starting points, not calibrated numbers.
-- ✅ `datacollector` firmware: builds and flashes; WiFi + upload flow is
-  implemented but **end-to-end upload to Edge Impulse is not yet
-  verified** — needs `include/Secrets.h` filled in with real WiFi
-  credentials and an Edge Impulse API key (copy from
-  `Secrets.h.example`, gitignored).
+- ✅ `datacollector` firmware: builds, flashes, boots cleanly, and connects
+  to WiFi on real hardware (confirmed via serial). Fixed two bugs found
+  while bringing it up on real hardware:
+  - The recording buffer and WAV/multipart upload body were allocated on
+    internal heap, which doesn't have a big enough contiguous free block
+    once M5.begin() and WiFi are up (~110 KB largest block vs. the ~160 KB
+    needed) — this crashed the boot outright when the buffer was a global
+    object (`new[]` throwing during C++ static init, which aborts because
+    exceptions are off by default). Fixed by enabling this board's PSRAM
+    (`-DBOARD_HAS_PSRAM` in `platformio.ini`, disabled by default on the
+    generic `m5stick-c` board def) and allocating both buffers there via
+    `heap_caps_malloc(..., MALLOC_CAP_SPIRAM)`.
+  - The upload used `POST /api/training/data` with `Content-Type:
+    audio/wav`, which Edge Impulse's ingestion API now rejects (422 — that
+    endpoint wants CBOR/JSON). Fixed to POST to `/api/training/files` as
+    `multipart/form-data`, confirmed against the live API with the
+    project's real key.
+  - **Still unverified: an actual on-device button-triggered
+    record → stop → upload cycle** — the fixes above were confirmed via
+    boot log and a direct `curl` upload test, not by pressing the
+    physical buttons, which needs a human at the device.
 - ⬜ No Edge Impulse model has been trained yet. `EdgeImpulseAngerDetector`
   is a stub; the ensemble currently runs heuristic-only.
 - ⬜ No labeled training data collected yet.
 
 ## Next steps
 
-1. Fill in `include/Secrets.h`, flash `datacollector`, and confirm clips
-   actually land in the Edge Impulse project's **Data acquisition** tab.
+1. `datacollector` is flashed and connects to WiFi — press BtnA to record
+   a clip, BtnA again to stop + upload, and confirm it lands in the Edge
+   Impulse project's **Data acquisition** tab (a `calm.wav` silence test
+   clip is already there from verifying the upload endpoint directly —
+   delete it before training).
 2. Record a batch of "angry" and "calm" clips.
 3. Train an audio classification model in Edge Impulse Studio, export it
    as an Arduino library, drop it in `lib_deps`, and fill in

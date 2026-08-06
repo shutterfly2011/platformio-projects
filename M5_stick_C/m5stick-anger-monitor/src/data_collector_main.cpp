@@ -63,6 +63,13 @@ void setup() {
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextColor(WHITE);
   M5.Lcd.setCursor(4, 4);
+
+  if (!uploader.begin()) {
+    M5.Lcd.fillScreen(RED);
+    M5.Lcd.print("Recording buffer\nalloc failed.\nReset device.");
+    while (true) delay(1000);
+  }
+
   M5.Lcd.print("Connecting WiFi...");
 
   if (!uploader.connectWifi()) {
