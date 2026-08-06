@@ -48,3 +48,7 @@ constexpr int kAlertBeepGapMs = 120;
 constexpr uint32_t kDataCollectMaxDurationSec = 5;
 constexpr size_t kDataCollectMaxSamples =
     kSampleRateHz * kDataCollectMaxDurationSec;
+// BtnA's own click is picked up by the mic for a moment after the press —
+// skip mic frames for this long after startRecording() so it doesn't end
+// up in the clip.
+constexpr uint32_t kDataCollectStartDelayMs = 300;

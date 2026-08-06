@@ -9,7 +9,11 @@
 // streaming" here means "buffer while recording, upload on stop."
 class EdgeImpulseUploader {
  public:
-  EdgeImpulseUploader(uint32_t sampleRate, size_t maxSamples);
+  // startDelayMs: mic frames fed within this long after startRecording()
+  // are discarded rather than written to the buffer, so the physical click
+  // of the button that triggered the recording doesn't end up in the clip.
+  EdgeImpulseUploader(uint32_t sampleRate, size_t maxSamples,
+                       uint32_t startDelayMs = 0);
   ~EdgeImpulseUploader();
 
   // Allocates the recording buffer. Must be called once from setup() before
@@ -44,8 +48,10 @@ class EdgeImpulseUploader {
  private:
   uint32_t _sampleRate;
   size_t _maxSamples;
+  uint32_t _startDelayMs;
   int16_t* _buffer = nullptr;
   size_t _writeIndex = 0;
   bool _recording = false;
+  uint32_t _recordingStartMs = 0;
   const char* _label = "";
 };

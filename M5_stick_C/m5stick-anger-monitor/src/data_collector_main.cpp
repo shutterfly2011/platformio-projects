@@ -16,7 +16,8 @@ constexpr int kLabelCount = sizeof(kLabels) / sizeof(kLabels[0]);
 int labelIndex = 0;
 
 int16_t audioBuffer[kAudioFrameSamples];
-EdgeImpulseUploader uploader(kSampleRateHz, kDataCollectMaxSamples);
+EdgeImpulseUploader uploader(kSampleRateHz, kDataCollectMaxSamples,
+                              kDataCollectStartDelayMs);
 
 void renderStatus() {
   M5.Lcd.fillScreen(BLACK);

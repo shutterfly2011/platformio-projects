@@ -66,8 +66,11 @@ void writeWavHeader(uint8_t* header, uint32_t dataBytes,
 }  // namespace
 
 EdgeImpulseUploader::EdgeImpulseUploader(uint32_t sampleRate,
-                                          size_t maxSamples)
-    : _sampleRate(sampleRate), _maxSamples(maxSamples) {}
+                                          size_t maxSamples,
+                                          uint32_t startDelayMs)
+    : _sampleRate(sampleRate),
+      _maxSamples(maxSamples),
+      _startDelayMs(startDelayMs) {}
 
 EdgeImpulseUploader::~EdgeImpulseUploader() { heap_caps_free(_buffer); }
 
@@ -101,10 +104,14 @@ void EdgeImpulseUploader::startRecording(const char* label) {
   _label = label;
   _writeIndex = 0;
   _recording = true;
+  _recordingStartMs = millis();
 }
 
 void EdgeImpulseUploader::feed(const int16_t* samples, size_t count) {
   if (!_recording) return;
+  // Still "recording" (isRecording() stays true, status display keeps
+  // ticking) but drop frames until the button click has passed.
+  if (millis() - _recordingStartMs < _startDelayMs) return;
 
   size_t room = _maxSamples - _writeIndex;
   size_t toCopy = std::min(room, count);
