@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "adafruit_feather_esp32s3_tft"
+		},
+		{
+			"path": "M5_stick_C"
+		}
+	],
+	"settings": {
+		"platformio-ide.activateProjectOnTextEditorChange": false
+	}
+}
