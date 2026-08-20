@@ -1,0 +1,17 @@
+[Unit]
+Description=Audio conversation stream recorder server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust user/group and paths for your deployment.
+User=audio-stream
+Group=audio-stream
+WorkingDirectory=/opt/audio-conversation-analysis/server
+ExecStart=/usr/bin/python3 /opt/audio-conversation-analysis/server/main.py --config /etc/audio-stream-server/config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

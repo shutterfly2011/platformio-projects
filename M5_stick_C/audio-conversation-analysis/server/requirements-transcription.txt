@@ -1,0 +1,5 @@
+# Install this only if you're enabling `transcription.enabled: true` in
+# config.yaml. Not needed on servers without GPU/CPU headroom to run Whisper.
+faster-whisper>=1.0.0
+webrtcvad>=2.0.10
+numpy>=1.24

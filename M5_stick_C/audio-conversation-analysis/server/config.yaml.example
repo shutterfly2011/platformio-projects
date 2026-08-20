@@ -1,0 +1,59 @@
+# Copy this file to config.yaml and adjust for your environment.
+
+# Address/port the server listens on for incoming device connections.
+listen_host: "0.0.0.0"
+listen_port: 5050
+
+# Directory where finished MP3 recordings are stored.
+# Created automatically if it doesn't exist.
+storage_dir: "/var/lib/audio-conversation-analysis/recordings"
+
+# MP3 encoding bitrate passed to ffmpeg (e.g. "64k", "128k", "192k").
+mp3_bitrate: "96k"
+
+# Path to the ffmpeg binary. Change if it's not on PATH.
+ffmpeg_path: "ffmpeg"
+
+# strftime-compatible timestamp format used in output filenames.
+# Final filename is "<start>-<end>.mp3".
+timestamp_format: "%Y%m%d_%H%M%S"
+
+# Logging verbosity: DEBUG, INFO, WARNING, ERROR.
+log_level: "INFO"
+
+# Optional real-time transcription. Requires the extra dependencies in
+# requirements-transcription.txt (faster-whisper, webrtcvad) to be installed.
+# Leave enabled: false (or omit this whole section) on servers without GPU/CPU
+# headroom to run a Whisper model - nothing else in this config depends on it,
+# and the transcription code is never even imported when disabled.
+transcription:
+  enabled: false
+
+  # Any faster-whisper model name (e.g. "tiny", "base", "small", "medium",
+  # "large-v3") or a local/HuggingFace path to a custom or fine-tuned model.
+  # Larger models are slower but meaningfully more accurate, especially for
+  # non-English audio - large-v3 is recommended if you have the compute for it.
+  model: "large-v3"
+
+  # "cpu", "cuda", or "auto" to let ctranslate2 pick.
+  device: "auto"
+
+  # Quantization/precision, e.g. "default", "float16", "int8_float16", "int8".
+  # See https://opennmt.net/CTranslate2/quantization.html
+  compute_type: "default"
+
+  # "auto" detects the spoken language from the first audio chunk and then
+  # locks it in for the rest of that recording. Pin an explicit code (e.g.
+  # "zh", "en") if you know the language in advance - it's faster and more
+  # reliable than per-recording auto-detection. Transcripts are always kept
+  # in the source language (never translated).
+  language: "auto"
+
+  # Audio is chunked at natural pauses (via voice activity detection) rather
+  # than a hard clock boundary, so words aren't cut mid-utterance:
+  #   - chunk_seconds: force a cut after this many seconds even without a pause
+  #   - min_chunk_seconds: don't cut earlier than this even if a pause is seen
+  #   - silence_ms: how much trailing silence counts as a pause worth cutting at
+  chunk_seconds: 10
+  min_chunk_seconds: 3
+  silence_ms: 500
